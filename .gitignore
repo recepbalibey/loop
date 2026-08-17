@@ -1,0 +1,49 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# Xcode (if ever opened in Xcode)
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+*.xcuserstate
+DerivedData/
+
+# Built app bundle (rebuilt from source via build_app.sh)
+Loop.app
+
+# Packaging artifacts
+*.dmg
+*.pkg
+*.ipa
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# Logs
+*.log
+
+# Runtime data (user-specific, not source)
+~/Library/Application Support/Loop/
+
+# Signing credentials (never commit)
+*.p12
+*.cer
+*.key
+*.mobileprovision
+*.provisionprofile
+
+# IDE
+.vscode/
+.idea/
