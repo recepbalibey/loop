@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="Resources/AppIcon.icns" width="100" alt="Loop icon">
+  <img src="https://raw.githubusercontent.com/recepbalibey/loop/main/Resources/AppIcon.icns" width="100" alt="Loop icon">
 </p>
 
 <h1 align="center">Loop</h1>
@@ -26,9 +26,9 @@
     <td align="center"><b>Preferences</b></td>
   </tr>
   <tr>
-    <td><img src="1.png" width="220" alt="Main panel showing reminders grouped by date"></td>
-    <td><img src="2.png" width="185" alt="Edit window with scheduling options"></td>
-    <td><img src="3.png" width="178" alt="Preferences window"></td>
+    <td><img src="https://raw.githubusercontent.com/recepbalibey/loop/main/1.png" width="220" alt="Main panel showing reminders grouped by date"></td>
+    <td><img src="https://raw.githubusercontent.com/recepbalibey/loop/main/2.png" width="185" alt="Edit window with scheduling options"></td>
+    <td><img src="https://raw.githubusercontent.com/recepbalibey/loop/main/3.png" width="178" alt="Preferences window"></td>
   </tr>
   <tr>
     <td>Search, add, complete. Grouped by Overdue, Today, Tomorrow, This Week, Later. Priority flags and filter chips.</td>
