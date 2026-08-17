@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="Resources/AppIcon.icns" width="100" alt="Loop icon">
+  <img src="Resources/AppIcon.png" width="100" alt="Loop icon">
 </p>
 
 <h1 align="center">Loop</h1>
