@@ -49,6 +49,10 @@ When the time comes, you get a real macOS notification with **Mark Done** and
 **Snooze 1 Hour** buttons. For longer tasks, Loop can check in with you every few
 minutes to keep you on track.
 
+Optionally, Loop can also prompt you to record what you have done during the day.
+Each update becomes part of a local, timestamped daily work log. At the end of your
+configured work day, Loop opens the final log for reading and locks it as read-only.
+
 Everything stays on your Mac as plain JSON files. No cloud. No accounts. No tracking.
 
 ---
@@ -71,6 +75,16 @@ Everything stays on your Mac as plain JSON files. No cloud. No accounts. No trac
 | **Recurring** | Daily, Weekdays, or Weekly. Completing rolls it forward |
 | **Check-ins** | Optional "Still on it?" notifications every 15, 30, 45, or 60 minutes |
 | **24-hour time** | HH:mm input with a quick-pick menu of times near now |
+
+### Daily Work Log
+
+| | |
+|---|---|
+| **Optional** | Disabled by default. Turn it on only when you want progress prompts |
+| **Prompt interval** | Every 45, 60, or 90 minutes, or a custom interval of 30 minutes or more |
+| **Work hours** | Choose when prompts begin and when your work day ends |
+| **Large writing view** | Clicking a prompt opens a large window to record a short update |
+| **Daily review** | At the end time, read the complete log. Past work days are read-only |
 
 ### Organise
 
@@ -260,6 +274,7 @@ Loop stores everything in `~/Library/Application Support/Loop/`:
 |---|---|
 | `reminders.json` | All reminders |
 | `templates.json` | Saved templates |
+| `work-log.json` | Timestamped daily work-log entries |
 
 Nothing is sent anywhere. A corrupt file is backed up as
 `reminders.corrupted-<timestamp>.json`, never silently deleted.
@@ -271,8 +286,8 @@ Nothing is sent anywhere. A corrupt file is backed up as
 Loop is a working product in daily use. It is not a prototype.
 
 **What works:** natural language input, scheduling, recurring reminders, check-in
-notifications, priority, drag and drop, templates, search, keyboard navigation,
-export, accent colours, launch at login.
+notifications, daily work logs, priority, drag and drop, templates, search, keyboard
+navigation, export, accent colours, launch at login.
 
 **What is missing (ranked):**
 
