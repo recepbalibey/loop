@@ -25,8 +25,10 @@ struct LoopApp: App {
 final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate, NSMenuDelegate {
     let store = TaskStore()
     let templateStore = TemplateStore()
+    let workLogStore = WorkLogStore()
     let notificationAuthorization = NotificationAuthorization()
     private let notificationScheduler = NotificationScheduler()
+    private let workLogNotificationScheduler = WorkLogNotificationScheduler()
 
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
@@ -36,6 +38,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     private var editPresentationCount = 0
 
     private var preferencesWindow: NSWindow?
+    private var workLogWindow: NSWindow?
+    private var workLogHostingController: NSHostingController<AnyView>?
+    private var workLogPresentationCount = 0
 
     private var hotKeyRef: EventHotKeyRef?
     private var hotKeyHandler: EventHandlerRef?
@@ -44,7 +49,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
-        UserDefaults.standard.register(defaults: [PreferenceKeys.notificationsEnabled: true])
+        UserDefaults.standard.register(defaults: [
+            PreferenceKeys.notificationsEnabled: true,
+            PreferenceKeys.workLogEnabled: false,
+            PreferenceKeys.workLogIntervalMinutes: 60,
+            PreferenceKeys.workLogStartHour: 9,
+            PreferenceKeys.workLogStartMinute: 0,
+            PreferenceKeys.workLogEndHour: 23,
+            PreferenceKeys.workLogEndMinute: 0
+        ])
         UNUserNotificationCenter.current().delegate = self
     }
 
@@ -54,8 +67,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         setupPopover()
         registerGlobalHotKey()
         notificationScheduler.registerCategories()
+        workLogNotificationScheduler.registerCategories()
         notificationAuthorization.requestIfNeeded()
         notificationScheduler.sync(with: store.items) // cover state from before this launch
+        refreshWorkLogSchedule()
         observeStoreChanges()
         startOverdueRefreshTimer()
     }
@@ -77,6 +92,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     private func startOverdueRefreshTimer() {
         overdueRefreshTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             self?.updateStatusItemIcon()
+            self?.refreshWorkLogSchedule()
         }
     }
 
@@ -448,6 +464,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
                 onHotKeyChanged: { [weak self] in
                     self?.applyCurrentHotKeyBinding()
                 },
+                onWorkLogPreferenceChanged: { [weak self] in
+                    self?.refreshWorkLogSchedule()
+                },
                 notificationAuthorization: notificationAuthorization
             ))
             let window = NSWindow(contentViewController: hosting)
@@ -496,6 +515,54 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         } catch {
             print("Loop: failed to write .ics export: \(error)")
         }
+    }
+
+    // MARK: - Daily work log
+
+    private func refreshWorkLogSchedule() {
+        workLogStore.lockFinishedDays(workDayEndsAt: WorkLogNotificationScheduler.workDayEndTime())
+        workLogNotificationScheduler.sync()
+    }
+
+    private func showWorkLogWindow(review: Bool) {
+        refreshWorkLogSchedule()
+        popover?.performClose(nil)
+        NSApp.activate(ignoringOtherApps: true)
+
+        workLogPresentationCount += 1
+        let rootView = AnyView(
+            WorkLogWindowView(mode: review ? .review : .write, onDismiss: { [weak self] in
+                self?.workLogWindow?.orderOut(nil)
+            })
+            .environment(workLogStore)
+            .id("work-log-\(workLogPresentationCount)")
+        )
+
+        if let workLogHostingController {
+            workLogHostingController.rootView = rootView
+        } else {
+            let hosting = NSHostingController(rootView: rootView)
+            let window = NSWindow(contentViewController: hosting)
+            window.title = "Loop Work Log"
+            window.styleMask = [.titled, .closable, .resizable]
+            window.isReleasedWhenClosed = false
+            workLogWindow = window
+            workLogHostingController = hosting
+        }
+
+        sizeWorkLogWindow()
+        workLogWindow?.makeKeyAndOrderFront(nil)
+    }
+
+    private func sizeWorkLogWindow() {
+        guard let window = workLogWindow, let screen = NSScreen.main else {
+            workLogWindow?.setContentSize(NSSize(width: 950, height: 700))
+            return
+        }
+        let frame = screen.visibleFrame
+        let size = NSSize(width: min(1_100, frame.width * 0.82), height: min(820, frame.height * 0.82))
+        window.setContentSize(size)
+        window.setFrameOrigin(NSPoint(x: frame.midX - size.width / 2, y: frame.midY - size.height / 2))
     }
 
     // MARK: - Global hotkey (⌥⌘L by default, customizable in Preferences)
@@ -575,11 +642,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         defer { completionHandler() }
+        let notificationID = response.notification.request.identifier
+        if WorkLogNotificationScheduler.isWorkLogNotification(notificationID) {
+            let review = response.notification.request.content.categoryIdentifier == WorkLogNotificationScheduler.reviewCategoryID
+            DispatchQueue.main.async { [weak self] in self?.showWorkLogWindow(review: review) }
+            return
+        }
         // Check-ins register under a suffixed identifier, so parsing the raw string as
         // a UUID only ever worked for a reminder's opening alert. Every button on a
         // check-in notification silently did nothing, and clicking the banner didn't
         // even open the panel, because the failed parse bailed out before the switch.
-        let id = NotificationIdentifier.reminderID(from: response.notification.request.identifier)
+        let id = NotificationIdentifier.reminderID(from: notificationID)
 
         switch response.actionIdentifier {
         case NotificationScheduler.markDoneActionID:

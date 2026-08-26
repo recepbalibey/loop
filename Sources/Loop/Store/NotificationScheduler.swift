@@ -174,6 +174,12 @@ enum PreferenceKeys {
     static let menuBarShowsText = "menuBarShowsText"
     static let accentColorOption = "accentColorOption"
     static let notificationSoundOption = "notificationSoundOption"
+    static let workLogEnabled = "workLogEnabled"
+    static let workLogIntervalMinutes = "workLogIntervalMinutes"
+    static let workLogStartHour = "workLogStartHour"
+    static let workLogStartMinute = "workLogStartMinute"
+    static let workLogEndHour = "workLogEndHour"
+    static let workLogEndMinute = "workLogEndMinute"
     /// Virtual keycode (`NSEvent.keyCode` / Carbon `kVK_*`) and `NSEvent.ModifierFlags`
     /// raw value for the global "open Loop" shortcut. Missing means the original
     /// fixed default, ⌥⌘L.

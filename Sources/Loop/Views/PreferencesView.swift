@@ -19,6 +19,7 @@ struct PreferencesView: View {
     /// Called after a new shortcut is recorded — AppDelegate owns the actual Carbon
     /// hotkey registration and needs to unregister/re-register it immediately.
     var onHotKeyChanged: () -> Void
+    var onWorkLogPreferenceChanged: () -> Void
     var notificationAuthorization: NotificationAuthorization
 
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
@@ -28,6 +29,12 @@ struct PreferencesView: View {
     @AppStorage(PreferenceKeys.notificationSoundOption) private var notificationSoundOptionRaw = NotificationSoundOption.system.rawValue
     @AppStorage(PreferenceKeys.hotKeyCode) private var hotKeyCode = 37 // kVK_ANSI_L
     @AppStorage(PreferenceKeys.hotKeyModifierFlags) private var hotKeyModifierFlags = Int(NSEvent.ModifierFlags([.option, .command]).rawValue)
+    @AppStorage(PreferenceKeys.workLogEnabled) private var workLogEnabled = false
+    @AppStorage(PreferenceKeys.workLogIntervalMinutes) private var workLogIntervalMinutes = 60
+    @AppStorage(PreferenceKeys.workLogStartHour) private var workLogStartHour = 9
+    @AppStorage(PreferenceKeys.workLogStartMinute) private var workLogStartMinute = 0
+    @AppStorage(PreferenceKeys.workLogEndHour) private var workLogEndHour = 23
+    @AppStorage(PreferenceKeys.workLogEndMinute) private var workLogEndMinute = 0
     @StateObject private var hotKeyRecorder = HotKeyRecorder()
     @State private var didCopyExport = false
 
@@ -37,6 +44,38 @@ struct PreferencesView: View {
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+    }
+
+    private var workLogIntervalSelection: Int {
+        [45, 60, 90].contains(workLogIntervalMinutes) ? workLogIntervalMinutes : 0
+    }
+
+    private func setWorkLogIntervalSelection(_ value: Int) {
+        if value == 0 {
+            if [45, 60, 90].contains(workLogIntervalMinutes) { workLogIntervalMinutes = 120 }
+        } else {
+            workLogIntervalMinutes = value
+        }
+        onWorkLogPreferenceChanged()
+    }
+
+    private func workLogTimePicker(label: String, hour: Binding<Int>, minute: Binding<Int>) -> some View {
+        HStack {
+            Text(label)
+            Spacer()
+            Picker("Hour", selection: hour) {
+                ForEach(0..<24, id: \.self) { Text(String(format: "%02d", $0)).tag($0) }
+            }
+            .labelsHidden()
+            .frame(width: 62)
+            Text(":")
+                .foregroundStyle(.secondary)
+            Picker("Minute", selection: minute) {
+                ForEach([0, 15, 30, 45], id: \.self) { Text(String(format: "%02d", $0)).tag($0) }
+            }
+            .labelsHidden()
+            .frame(width: 62)
+        }
     }
 
     /// `NSSound(named:)` plays the same system alert sound resources
@@ -102,6 +141,59 @@ struct PreferencesView: View {
                 Text("General")
             } footer: {
                 Text("Loop lives only in the menu bar. Your reminders are stored locally on this Mac.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                Toggle("Ask for work updates", isOn: $workLogEnabled)
+                    .onChange(of: workLogEnabled) { _, _ in onWorkLogPreferenceChanged() }
+
+                Picker("Prompt every", selection: Binding(
+                    get: { workLogIntervalSelection },
+                    set: setWorkLogIntervalSelection
+                )) {
+                    Text("45 minutes").tag(45)
+                    Text("60 minutes").tag(60)
+                    Text("90 minutes").tag(90)
+                    Text("Custom").tag(0)
+                }
+                .disabled(!workLogEnabled)
+
+                if workLogIntervalSelection == 0 {
+                    Stepper(value: Binding(
+                        get: { workLogIntervalMinutes },
+                        set: { newValue in
+                            workLogIntervalMinutes = newValue
+                            onWorkLogPreferenceChanged()
+                        }
+                    ), in: 30...480, step: 15) {
+                        Text("Custom interval: \(workLogIntervalMinutes) minutes")
+                    }
+                    .disabled(!workLogEnabled)
+                }
+
+                workLogTimePicker(
+                    label: "Start prompts",
+                    hour: $workLogStartHour,
+                    minute: $workLogStartMinute
+                )
+                .disabled(!workLogEnabled)
+                .onChange(of: workLogStartHour) { _, _ in onWorkLogPreferenceChanged() }
+                .onChange(of: workLogStartMinute) { _, _ in onWorkLogPreferenceChanged() }
+
+                workLogTimePicker(
+                    label: "End and review",
+                    hour: $workLogEndHour,
+                    minute: $workLogEndMinute
+                )
+                .disabled(!workLogEnabled)
+                .onChange(of: workLogEndHour) { _, _ in onWorkLogPreferenceChanged() }
+                .onChange(of: workLogEndMinute) { _, _ in onWorkLogPreferenceChanged() }
+            } header: {
+                Text("Daily Work Log")
+            } footer: {
+                Text("Loop opens a large writing window after each prompt. At the end time, you can read the day’s log. The day then stays read-only. Custom intervals start at 30 minutes so Loop can reliably schedule ahead.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
