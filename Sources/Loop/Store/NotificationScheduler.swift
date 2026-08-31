@@ -18,8 +18,13 @@ final class NotificationScheduler {
         UserDefaults.standard.bool(forKey: PreferenceKeys.notificationsEnabled)
     }
 
-    private static var chosenSound: UNNotificationSound {
-        let raw = UserDefaults.standard.string(forKey: PreferenceKeys.notificationSoundOption) ?? NotificationSoundOption.system.rawValue
+    static func chosenSound(for key: String) -> UNNotificationSound {
+        let defaults = UserDefaults.standard
+        // Existing installs keep their former selected sound until each new sound is
+        // explicitly customized.
+        let raw = defaults.string(forKey: key)
+            ?? defaults.string(forKey: PreferenceKeys.notificationSoundOption)
+            ?? NotificationSoundOption.system.rawValue
         return NotificationSoundOption.resolved(from: raw).unNotificationSound
     }
 
@@ -89,7 +94,7 @@ final class NotificationScheduler {
         let content = UNMutableNotificationContent()
         content.title = "Test Notification"
         content.body = "If you can see this, Loop's notifications are working."
-        content.sound = Self.chosenSound
+        content.sound = Self.chosenSound(for: PreferenceKeys.reminderSoundOption)
 
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 2, repeats: false)
         let request = UNNotificationRequest(identifier: "loop-test-notification", content: content, trigger: trigger)
@@ -107,7 +112,7 @@ final class NotificationScheduler {
             if let notes = item.notes, !notes.isEmpty {
                 content.body = notes
             }
-            content.sound = Self.chosenSound
+            content.sound = Self.chosenSound(for: PreferenceKeys.reminderSoundOption)
             content.categoryIdentifier = reminderCategoryID
 
             let request = UNNotificationRequest(
@@ -126,7 +131,7 @@ final class NotificationScheduler {
             let checkInContent = UNMutableNotificationContent()
             checkInContent.title = "Still on it?"
             checkInContent.body = "Checking in on “\(item.title)”"
-            checkInContent.sound = Self.chosenSound
+            checkInContent.sound = Self.chosenSound(for: PreferenceKeys.checkInSoundOption)
             checkInContent.categoryIdentifier = reminderCategoryID
 
             let checkInRequest = UNNotificationRequest(
@@ -174,6 +179,10 @@ enum PreferenceKeys {
     static let menuBarShowsText = "menuBarShowsText"
     static let accentColorOption = "accentColorOption"
     static let notificationSoundOption = "notificationSoundOption"
+    static let reminderSoundOption = "reminderSoundOption"
+    static let checkInSoundOption = "checkInSoundOption"
+    static let workLogPromptSoundOption = "workLogPromptSoundOption"
+    static let workLogReviewSoundOption = "workLogReviewSoundOption"
     static let workLogEnabled = "workLogEnabled"
     static let workLogIntervalMinutes = "workLogIntervalMinutes"
     static let workLogStartHour = "workLogStartHour"

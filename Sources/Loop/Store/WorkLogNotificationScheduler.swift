@@ -80,23 +80,19 @@ final class WorkLogNotificationScheduler {
 
     private func request(for event: WorkLogSchedule.Event) -> UNNotificationRequest {
         let content = UNMutableNotificationContent()
-        content.sound = notificationSound
         switch event.kind {
         case .prompt:
+            content.sound = NotificationScheduler.chosenSound(for: PreferenceKeys.workLogPromptSoundOption)
             content.title = "What have you done so far?"
             content.body = "Add a short update to today’s work log."
             content.categoryIdentifier = Self.promptCategoryID
         case .dailyReview:
+            content.sound = NotificationScheduler.chosenSound(for: PreferenceKeys.workLogReviewSoundOption)
             content.title = "Your work day is complete"
             content.body = "Read today’s work log. It is now read-only."
             content.categoryIdentifier = Self.reviewCategoryID
         }
         return UNNotificationRequest(identifier: identifier(for: event), content: content, trigger: calendarTrigger(for: event.date))
-    }
-
-    private var notificationSound: UNNotificationSound {
-        let raw = UserDefaults.standard.string(forKey: PreferenceKeys.notificationSoundOption) ?? NotificationSoundOption.system.rawValue
-        return NotificationSoundOption.resolved(from: raw).unNotificationSound
     }
 
     private func identifier(for event: WorkLogSchedule.Event) -> String {

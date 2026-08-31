@@ -7,6 +7,8 @@ import Observation
 public final class WorkLogStore {
     public private(set) var days: [WorkLogDay] = []
     public let fileURL: URL
+    /// Human-readable copies of every day, suitable for Finder, Spotlight, and backup.
+    public let archiveDirectoryURL: URL
 
     private let encoder: JSONEncoder = {
         let encoder = JSONEncoder()
@@ -29,7 +31,11 @@ public final class WorkLogStore {
             try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             self.fileURL = directory.appendingPathComponent("work-log.json")
         }
+        self.archiveDirectoryURL = self.fileURL.deletingLastPathComponent()
+            .appendingPathComponent("Work Logs", isDirectory: true)
+        try? FileManager.default.createDirectory(at: archiveDirectoryURL, withIntermediateDirectories: true)
         load()
+        writeArchives()
     }
 
     public func day(for date: Date, calendar: Calendar = .current) -> WorkLogDay? {
@@ -104,5 +110,27 @@ public final class WorkLogStore {
     private func save() {
         guard let data = try? encoder.encode(days) else { return }
         try? data.write(to: fileURL, options: .atomic)
+        writeArchives()
+    }
+
+    private func writeArchives() {
+        let formatter = DateFormatter()
+        formatter.calendar = .current
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        for day in days {
+            let title = formatter.string(from: day.date)
+            var markdown = "# Work Log: \(title)\n\n"
+            markdown += day.isLocked ? "Status: Read-only\n\n" : "Status: Open\n\n"
+            if day.entries.isEmpty {
+                markdown += "No updates recorded.\n"
+            } else {
+                for entry in day.entries {
+                    markdown += "## \(entry.createdAt.formatted(date: .omitted, time: .shortened))\n\n\(entry.text)\n\n"
+                }
+            }
+            let fileURL = archiveDirectoryURL.appendingPathComponent("\(title).md")
+            try? markdown.write(to: fileURL, atomically: true, encoding: .utf8)
+        }
     }
 }

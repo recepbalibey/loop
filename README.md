@@ -85,6 +85,7 @@ Everything stays on your Mac as plain JSON files. No cloud. No accounts. No trac
 | **Work hours** | Choose when prompts begin and when your work day ends |
 | **Large writing view** | Clicking a prompt opens a large window to record a short update |
 | **Daily review** | At the end time, read the complete log. Past work days are read-only |
+| **Readable archive** | Every day is also saved as a Markdown file in the Work Logs folder |
 
 ### Organise
 
@@ -102,7 +103,8 @@ Everything stays on your Mac as plain JSON files. No cloud. No accounts. No trac
 |---|---|
 | **Mark Done** | Complete a reminder straight from the notification banner |
 | **Snooze** | Push it back one hour |
-| **Sounds** | Pick from 9 classic macOS alert sounds with a preview button |
+| **Separate sounds** | Choose and preview different sounds for reminders, check-ins, work-log prompts, and final reviews |
+| **Persistent alerts** | Open macOS Notification Settings from Loop and select Alerts to keep notifications visible until clicked |
 | **Permission check** | If macOS is blocking notifications, Loop tells you and links to Settings |
 
 ### Menu Bar
@@ -275,6 +277,7 @@ Loop stores everything in `~/Library/Application Support/Loop/`:
 | `reminders.json` | All reminders |
 | `templates.json` | Saved templates |
 | `work-log.json` | Timestamped daily work-log entries |
+| `Work Logs/YYYY-MM-DD.md` | Readable Markdown archive, one file per day |
 
 Nothing is sent anywhere. A corrupt file is backed up as
 `reminders.corrupted-<timestamp>.json`, never silently deleted.

@@ -3,6 +3,7 @@ import AppKit
 
 struct PreferencesView: View {
     var dataFileURL: URL
+    var workLogArchiveURL: URL
     var onNotificationsPreferenceChanged: () -> Void
     var onSendTestNotification: () -> Void
     /// Returns the Markdown checklist to copy — a closure rather than the raw items so
@@ -27,6 +28,10 @@ struct PreferencesView: View {
     @AppStorage(PreferenceKeys.menuBarShowsText) private var menuBarShowsText = false
     @AppStorage(PreferenceKeys.accentColorOption) private var accentColorOptionRaw = AccentColorOption.system.rawValue
     @AppStorage(PreferenceKeys.notificationSoundOption) private var notificationSoundOptionRaw = NotificationSoundOption.system.rawValue
+    @AppStorage(PreferenceKeys.reminderSoundOption) private var reminderSoundOptionRaw = NotificationSoundOption.system.rawValue
+    @AppStorage(PreferenceKeys.checkInSoundOption) private var checkInSoundOptionRaw = NotificationSoundOption.system.rawValue
+    @AppStorage(PreferenceKeys.workLogPromptSoundOption) private var workLogPromptSoundOptionRaw = NotificationSoundOption.system.rawValue
+    @AppStorage(PreferenceKeys.workLogReviewSoundOption) private var workLogReviewSoundOptionRaw = NotificationSoundOption.system.rawValue
     @AppStorage(PreferenceKeys.hotKeyCode) private var hotKeyCode = 37 // kVK_ANSI_L
     @AppStorage(PreferenceKeys.hotKeyModifierFlags) private var hotKeyModifierFlags = Int(NSEvent.ModifierFlags([.option, .command]).rawValue)
     @AppStorage(PreferenceKeys.workLogEnabled) private var workLogEnabled = false
@@ -83,13 +88,31 @@ struct PreferencesView: View {
     /// an accurate preview of what a real reminder will actually sound like — not a
     /// guess. "Default" has no direct system-sound equivalent to preview with, so it
     /// falls back to the classic system alert beep instead of playing nothing.
-    private func previewSound() {
-        let option = NotificationSoundOption.resolved(from: notificationSoundOptionRaw)
+    private func previewSound(_ raw: String) {
+        let option = NotificationSoundOption.resolved(from: raw.isEmpty ? notificationSoundOptionRaw : raw)
         if option == .system {
             NSSound.beep()
         } else {
             NSSound(named: option.rawValue)?.play()
         }
+    }
+
+    private func soundPicker(label: String, selection: Binding<String>, onChanged: @escaping () -> Void) -> some View {
+        HStack {
+            Picker(label, selection: selection) {
+                ForEach(NotificationSoundOption.allCases) { option in
+                    Text(option.rawValue).tag(option.rawValue)
+                }
+            }
+            Button {
+                previewSound(selection.wrappedValue)
+            } label: {
+                Image(systemName: "speaker.wave.2.fill")
+            }
+            .buttonStyle(.borderless)
+            .help("Preview this sound")
+        }
+        .onChange(of: selection.wrappedValue) { _, _ in onChanged() }
     }
 
     var body: some View {
@@ -103,25 +126,16 @@ struct PreferencesView: View {
                     .onChange(of: notificationsEnabled) { _, _ in
                         onNotificationsPreferenceChanged()
                     }
-                HStack {
-                    Picker("Sound", selection: $notificationSoundOptionRaw) {
-                        ForEach(NotificationSoundOption.allCases) { option in
-                            Text(option.rawValue).tag(option.rawValue)
-                        }
-                    }
+                soundPicker(label: "Reminder sound", selection: $reminderSoundOptionRaw, onChanged: onNotificationsPreferenceChanged)
                     .disabled(!notificationsEnabled)
-
-                    Button {
-                        previewSound()
-                    } label: {
-                        Image(systemName: "speaker.wave.2.fill")
-                    }
-                    .buttonStyle(.borderless)
+                soundPicker(label: "Check-in sound", selection: $checkInSoundOptionRaw, onChanged: onNotificationsPreferenceChanged)
                     .disabled(!notificationsEnabled)
-                    .help("Preview this sound")
-                }
                 Button("Send Test Notification", action: onSendTestNotification)
                     .disabled(!notificationsEnabled)
+                Button("Keep Notifications on Screen") {
+                    NotificationAuthorization.openSystemSettings()
+                }
+                .disabled(!notificationsEnabled)
 
                 if notificationAuthorization.status.blocksDelivery {
                     // Loop's own switch can be on while macOS refuses to deliver
@@ -140,7 +154,7 @@ struct PreferencesView: View {
             } header: {
                 Text("General")
             } footer: {
-                Text("Loop lives only in the menu bar. Your reminders are stored locally on this Mac.")
+                Text("To keep a notification visible until you click it, choose Alerts for Loop in macOS Notification Settings. macOS controls this behavior, not Loop.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -190,6 +204,11 @@ struct PreferencesView: View {
                 .disabled(!workLogEnabled)
                 .onChange(of: workLogEndHour) { _, _ in onWorkLogPreferenceChanged() }
                 .onChange(of: workLogEndMinute) { _, _ in onWorkLogPreferenceChanged() }
+
+                soundPicker(label: "Work-log prompt sound", selection: $workLogPromptSoundOptionRaw, onChanged: onWorkLogPreferenceChanged)
+                    .disabled(!workLogEnabled)
+                soundPicker(label: "Final review sound", selection: $workLogReviewSoundOptionRaw, onChanged: onWorkLogPreferenceChanged)
+                    .disabled(!workLogEnabled)
             } header: {
                 Text("Daily Work Log")
             } footer: {
@@ -230,6 +249,9 @@ struct PreferencesView: View {
             Section {
                 Button("Show My Data in Finder…") {
                     NSWorkspace.shared.activateFileViewerSelecting([dataFileURL])
+                }
+                Button("Show Work Log Archive in Finder…") {
+                    NSWorkspace.shared.open(workLogArchiveURL)
                 }
                 Button(didCopyExport ? "Copied!" : "Copy All Reminders as Text") {
                     let pasteboard = NSPasteboard.general

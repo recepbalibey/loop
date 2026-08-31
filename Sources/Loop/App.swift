@@ -63,6 +63,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard enforceSingleInstance() else { return }
+        migrateNotificationSoundPreferences()
         setupStatusItem()
         setupPopover()
         registerGlobalHotKey()
@@ -445,6 +446,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         if preferencesWindow == nil {
             let hosting = NSHostingController(rootView: PreferencesView(
                 dataFileURL: store.fileURL,
+                workLogArchiveURL: workLogStore.archiveDirectoryURL,
                 onNotificationsPreferenceChanged: { [weak self] in
                     guard let self else { return }
                     self.notificationScheduler.sync(with: self.store.items)
@@ -522,6 +524,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     private func refreshWorkLogSchedule() {
         workLogStore.lockFinishedDays(workDayEndsAt: WorkLogNotificationScheduler.workDayEndTime())
         workLogNotificationScheduler.sync()
+    }
+
+    private func migrateNotificationSoundPreferences() {
+        let defaults = UserDefaults.standard
+        let oldSound = defaults.string(forKey: PreferenceKeys.notificationSoundOption) ?? NotificationSoundOption.system.rawValue
+        for key in [
+            PreferenceKeys.reminderSoundOption,
+            PreferenceKeys.checkInSoundOption,
+            PreferenceKeys.workLogPromptSoundOption,
+            PreferenceKeys.workLogReviewSoundOption
+        ] where defaults.object(forKey: key) == nil {
+            defaults.set(oldSound, forKey: key)
+        }
     }
 
     private func showWorkLogWindow(review: Bool) {

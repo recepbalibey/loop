@@ -49,4 +49,15 @@ final class WorkLogStoreTests {
         let second = WorkLogStore(fileURL: tempFileURL)
         #expect(second.entries(for: date).first?.text == "Created a test")
     }
+
+    @Test func writesReadableMarkdownArchive() throws {
+        let store = WorkLogStore(fileURL: tempFileURL)
+        let loggedAt = date(10)
+        #expect(store.append("Completed the threat model", at: loggedAt))
+
+        let archive = store.archiveDirectoryURL.appendingPathComponent("2026-08-26.md")
+        let contents = try String(contentsOf: archive, encoding: .utf8)
+        #expect(contents.contains("# Work Log: 2026-08-26"))
+        #expect(contents.contains("Completed the threat model"))
+    }
 }
